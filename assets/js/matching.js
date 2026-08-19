@@ -10,6 +10,11 @@ const FORMAT_TANIMLARI = {
     gerekli: ['İşlem Tarihi','İşlem Türü','Borç Tutarı','Alacak Tutarı'],
     tarih:'İşlem Tarihi', tip:'İşlem Türü', borc:'Borç Tutarı', alacak:'Alacak Tutarı',
     evrak:'Evrak No', ek:'Açıklama'
+  },
+  logo_ekstre: {
+    gerekli: ['TARIH','BELGE NO','BELGETURU','BORC','ALACAK'],
+    tarih:'TARIH', tip:'BELGETURU', borc:'BORC', alacak:'ALACAK',
+    evrak:'BELGE NO', ek:'ACIKLAMA'
   }
 };
 

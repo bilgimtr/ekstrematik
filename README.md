@@ -36,11 +36,12 @@ eşleşen / eşleşmeyen / gruplu eşleşen hareketleri tek bir raporda göstere
 
 ## Desteklenen ekstre formatları
 
-Şu an iki Mikro export formatı tanınıyor (`FORMAT_TANIMLARI` altında tanımlı,
-hem `index.html` içindeki JS'de hem `ekstre_mutabakat.py` içinde):
+Şu an üç ekstre formatı tanınıyor (`FORMAT_TANIMLARI` altında tanımlı,
+hem `assets/js/matching.js` içinde hem `ekstre_mutabakat.py` içinde):
 
 - **hesap_karti**: `TARİH, EVRAK TİPİ, ANA DÖVİZ BORÇ, ANA DÖVİZ ALACAK, GIB FATURA NO, SORUMLU İSMİ`
 - **cari_ekstre**: `İşlem Tarihi, İşlem Türü, Borç Tutarı, Alacak Tutarı, Evrak No, Açıklama`
+- **logo_ekstre**: `TARIH, BELGE NO, BELGETURU, BORC, ALACAK, ACIKLAMA`
 
 Yeni bir formatla karşılaşılırsa `FORMAT_TANIMLARI` sözlüğüne birkaç satırlık yeni bir
 tanım eklemek yeterli.

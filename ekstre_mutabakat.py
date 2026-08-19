@@ -64,6 +64,16 @@ FORMAT_TANIMLARI = {
         "ek_bilgi_col": "Açıklama",
         "tarih_format": "%d.%m.%Y %H:%M:%S",
     },
+    "logo_ekstre": {
+        "gerekli_sutunlar": {"TARIH", "BELGE NO", "BELGETURU", "BORC", "ALACAK"},
+        "tarih_col": "TARIH",
+        "tip_col": "BELGETURU",
+        "borc_col": "BORC",
+        "alacak_col": "ALACAK",
+        "evrak_col": "BELGE NO",
+        "ek_bilgi_col": "ACIKLAMA",
+        "tarih_format": None,  # pandas otomatik algılar
+    },
 }
 
 
