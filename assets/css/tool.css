@@ -8,6 +8,11 @@
   gap:36px;
   align-items:start;
 }
+.tool-main{min-width:0;}
+
+/* Sonuç ekranı açıkken yan reklamı gizle, tabloya tam genişlik ver */
+.tool-layout.report-active{grid-template-columns:1fr;}
+.tool-layout.report-active .ad-banner-main{display:none;}
 
 header.hero{margin-bottom:40px;}
 .eyebrow{

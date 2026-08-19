@@ -20,6 +20,7 @@ function goToStep(n){
     c.classList.toggle('done', Number(c.dataset.conn) < n);
   });
   currentStep = n;
+  document.getElementById('tool-layout').classList.toggle('report-active', n===4);
   if(n===3) buildConfirmSummary();
 }
 
