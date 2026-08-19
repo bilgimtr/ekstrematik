@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekstrematik — Ekstre Mutabakat Aracı</title>
+<meta name="description" content="İki firmanın cari hesap ekstresini yükleyin, eşleşen ve eşleşmeyen hareketleri saniyeler içinde tek bir renkli tabloda görün. Verileriniz tarayıcınızdan hiç çıkmaz.">
+<meta property="og:title" content="Ekstrematik — Ekstre Mutabakat Aracı">
+<meta property="og:description" content="İki firmanın cari hesap ekstresini karşılaştırıp mutabakat raporu çıkaran ücretsiz, tarayıcı temelli araç.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="tr_TR">
+<link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
+<link rel="canonical" href="https://ekstrematik.com/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/base.css">
+<link rel="stylesheet" href="/assets/css/pages.css">
+<link rel="stylesheet" href="/assets/css/tool.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="site-nav">
+    <a class="site-logo" href="/">
+      <img src="/assets/img/logo.svg" width="26" height="26" alt="">
+      EKSTREMATİK
+    </a>
+    <ul class="site-links">
+      <li><a href="/" class="current">Araç</a></li>
+      <li><a href="/hakkimizda.html">Hakkımızda</a></li>
+      <li><a href="/gizlilik.html">Gizlilik</a></li>
+      <li><a href="/kullanim-sartlari.html">Kullanım Şartları</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+<div class="tool-wrap" id="wrap">
+  <div class="tool-layout">
+
+  <div>
+  <header class="hero">
+    <div class="eyebrow">Mutabakat aracı</div>
+    <h1>İki ekstre yükle,<br><em>farkları</em> tek tabloda gör.</h1>
+    <p class="lede">Adım adım ilerleyin: önce kendi ekstrenizi, sonra karşı firmanın ekstresini yükleyin, onaylayın — rapor otomatik hazırlansın.</p>
+    <div class="privacy-note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      Dosyalarınız tarayıcınızdan hiç çıkmaz — tüm işlem cihazınızda yapılır, sunucuya yüklenmez.
+    </div>
+  </header>
+
+  <div class="stepper" id="stepper">
+    <div class="step-item" data-step="1"><div class="step-circle">1</div><div class="step-label">Kendi firmanız</div></div>
+    <div class="step-connector" data-conn="1"></div>
+    <div class="step-item" data-step="2"><div class="step-circle">2</div><div class="step-label">Karşı firma</div></div>
+    <div class="step-connector" data-conn="2"></div>
+    <div class="step-item" data-step="3"><div class="step-circle">3</div><div class="step-label">Onayla</div></div>
+    <div class="step-connector" data-conn="3"></div>
+    <div class="step-item" data-step="4"><div class="step-circle">4</div><div class="step-label">Rapor</div></div>
+  </div>
+
+  <div class="stage">
+
+    <div class="step-panel active" id="panel-1">
+      <h2 class="panel-title">Kendi firmanızın ekstresi</h2>
+      <p class="panel-sub">Önce firma adınızı girin, ardından ekstre dosyanızı yükleyin.</p>
+      <span class="firma-label">Firma adı</span>
+      <input type="text" class="firma-adi" id="isim-a" value="" placeholder="Firma adınız" maxlength="40">
+      <div class="firma-adi-hint" id="hint-a">Firma adı gerekli</div>
+      <div class="drop" id="drop-a" data-slot="a">
+        <div class="drop-clear" id="clear-a">✕</div>
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <div class="drop-title" id="title-a">Ekstre dosyasını sürükle veya seç</div>
+        <div class="drop-sub">.xlsx veya .xls</div>
+        <div class="drop-filename" id="fname-a"></div>
+        <div class="drop-rowcount" id="rows-a"></div>
+        <input type="file" id="file-a" accept=".xlsx,.xls">
+      </div>
+      <div class="step-nav">
+        <span></span>
+        <button class="btn primary" id="next-1" disabled>İleri</button>
+      </div>
+    </div>
+
+    <div class="step-panel" id="panel-2">
+      <h2 class="panel-title">Karşı firmanın ekstresi</h2>
+      <p class="panel-sub">Mutabakat yapacağınız firmanın adını girin ve ekstresini yükleyin.</p>
+      <span class="firma-label">Firma adı</span>
+      <input type="text" class="firma-adi" id="isim-b" value="" placeholder="Karşı firmanın adı" maxlength="40">
+      <div class="firma-adi-hint" id="hint-b">Firma adı gerekli</div>
+      <div class="drop" id="drop-b" data-slot="b">
+        <div class="drop-clear" id="clear-b">✕</div>
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <div class="drop-title" id="title-b">Ekstre dosyasını sürükle veya seç</div>
+        <div class="drop-sub">.xlsx veya .xls</div>
+        <div class="drop-filename" id="fname-b"></div>
+        <div class="drop-rowcount" id="rows-b"></div>
+        <input type="file" id="file-b" accept=".xlsx,.xls">
+      </div>
+      <div class="step-nav">
+        <button class="btn" id="back-2">Geri</button>
+        <button class="btn primary" id="next-2" disabled>İleri</button>
+      </div>
+    </div>
+
+    <div class="step-panel" id="panel-3">
+      <h2 class="panel-title">Onayla ve çalıştır</h2>
+      <p class="panel-sub">Karşılaştırılacak iki ekstre aşağıda. Doğruysa mutabakatı başlatın.</p>
+      <div id="confirm-summary"></div>
+      <div class="run-area">
+        <button class="stamp-btn" id="run-btn">Mutabakatı<br>Çalıştır</button>
+        <div class="run-hint">Sonuç saniyeler içinde hazır olacak</div>
+      </div>
+      <div class="step-nav">
+        <button class="btn" id="back-3">Geri</button>
+        <span></span>
+      </div>
+    </div>
+
+    <div class="step-panel" id="panel-3-5">
+      <h2 class="panel-title">Raporunuz hazırlanıyor</h2>
+      <p class="panel-sub">Sonucunuz aşağıda birkaç saniye içinde görüntülenebilir olacak.</p>
+      <div class="ad-wait">
+        <div class="ad-slot" id="ad-slot">
+          <div class="ad-label">Reklam</div>
+          <div class="ad-placeholder-box"><!-- AdSense onayı sonrası: <ins class="adsbygoogle"> birimi buraya --></div>
+        </div>
+        <button class="btn primary" id="reveal-btn" disabled>
+          Sonucu Gör (<span id="ad-countdown">18</span>)
+        </button>
+      </div>
+    </div>
+
+    <div class="step-panel" id="panel-4">
+      <h2 class="panel-title">Mutabakat raporu</h2>
+      <div class="summary" id="summary"></div>
+
+      <div class="toolbar">
+        <div class="toolbar-title">Karşılaştırma tablosu</div>
+        <button class="btn primary" id="download-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          Excel indir
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr id="thead-row">
+                <th class="group-a">Tarih</th>
+                <th class="group-a">Evrak tipi</th>
+                <th class="group-a">Borç</th>
+                <th class="group-a">Alacak</th>
+                <th class="group-a">Evrak no</th>
+                <th class="group-a">Ek bilgi</th>
+                <th class="group-b">Tarih</th>
+                <th class="group-b">Evrak tipi</th>
+                <th class="group-b">Borç</th>
+                <th class="group-b">Alacak</th>
+                <th class="group-b">Evrak no</th>
+                <th class="group-b">Ek bilgi</th>
+                <th class="group-d">Durum</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn" id="restart-btn">Yeni mutabakat</button>
+        <span></span>
+      </div>
+    </div>
+
+  </div>
+  </div>
+
+  <aside class="ad-banner-main">
+    <div class="ad-label">Reklam</div>
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:300px;height:600px"
+         data-ad-client="ca-pub-6046256779379664"
+         data-ad-slot="7885688822"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </aside>
+
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-brand">EKSTREMATİK — cari hesap ekstresi mutabakat aracı</div>
+    <ul class="site-footer-links">
+      <li><a href="/hakkimizda.html">Hakkımızda</a></li>
+      <li><a href="/gizlilik.html">Gizlilik Politikası</a></li>
+      <li><a href="/kullanim-sartlari.html">Kullanım Şartları</a></li>
+      <li><button type="button" class="consent-pref-link">Çerez Tercihleri</button></li>
+    </ul>
+  </div>
+</footer>
+
+<script src="/assets/js/matching.js"></script>
+<script src="/assets/js/app.js"></script>
+<script src="/assets/js/consent.js"></script>
+</body>
+</html>
