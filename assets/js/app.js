@@ -180,7 +180,7 @@ runBtn.addEventListener('click', ()=>{
   void runBtn.offsetWidth;
   runBtn.classList.add('stamped');
   runMutabakat();
-  setTimeout(()=>showAdGate(), 260);
+  setTimeout(()=>goToStep(4), 260); // reklam kapısı şimdilik devre dışı — geri açmak için showAdGate() ile değiştir
 });
 
 function runMutabakat(){
