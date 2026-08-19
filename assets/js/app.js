@@ -47,6 +47,100 @@ function buildConfirmSummary(){
 
 /* ============ Dosya yükleme alanları ============ */
 
+function uygulaBasariliYukleme(slot, file, rows, fmt, onChange){
+  const dropEl = document.getElementById('drop-'+slot);
+  const titleEl = document.getElementById('title-'+slot);
+  const fnameEl = document.getElementById('fname-'+slot);
+  const rowsEl = document.getElementById('rows-'+slot);
+  const {kayitlar, hareketler} = extractMovements(rows, fmt.def);
+  state[slot] = {file, rows, fmt, kayitlar, hareketler};
+  dropEl.classList.remove('error');
+  dropEl.classList.add('filled');
+  titleEl.textContent = 'Dosya yüklendi';
+  fnameEl.textContent = file.name;
+  rowsEl.textContent = `${kayitlar.length} hareket bulundu`;
+  onChange();
+  const isimEl = document.getElementById('isim-'+slot);
+  if(isimEl.value.trim()===''){
+    isimEl.focus();
+  }
+}
+
+/* ============ Sütun eşleştirme penceresi (bilinmeyen format) ============ */
+
+let mappingCtx = null;
+
+const MAPPING_ALANLARI = [
+  {key:'tarih', label:'Tarih', zorunlu:true},
+  {key:'borc', label:'Borç', zorunlu:true},
+  {key:'alacak', label:'Alacak', zorunlu:true},
+  {key:'tip', label:'Evrak Tipi', zorunlu:false},
+  {key:'evrak', label:'Evrak No', zorunlu:false},
+  {key:'ek', label:'Ek Bilgi', zorunlu:false},
+];
+
+function openMappingModal(slot, file, rows, onChange){
+  mappingCtx = {slot, file, rows, onChange};
+  const cols = Object.keys(rows[0] || {});
+  const tahmin = enIyiTahminler(cols);
+  const fieldsEl = document.getElementById('mapping-fields');
+
+  fieldsEl.innerHTML = MAPPING_ALANLARI.map(alan=>{
+    const bosSecenek = alan.zorunlu ? '<option value="">— Seçin —</option>' : '<option value="">— Yok —</option>';
+    const secenekler = cols.map(c=>{
+      const secili = tahmin[alan.key] === c ? ' selected' : '';
+      return `<option value="${c}"${secili}>${c}</option>`;
+    }).join('');
+    return `
+      <div class="mapping-row">
+        <label>${alan.label}${alan.zorunlu ? ' *' : ''}</label>
+        <select data-field="${alan.key}">${bosSecenek}${secenekler}</select>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('mapping-overlay').classList.add('show');
+}
+
+function closeMappingModal(){
+  document.getElementById('mapping-overlay').classList.remove('show');
+  mappingCtx = null;
+}
+
+document.getElementById('mapping-cancel').addEventListener('click', ()=>{
+  if(mappingCtx){
+    const {slot, file, onChange} = mappingCtx;
+    const dropEl = document.getElementById('drop-'+slot);
+    const titleEl = document.getElementById('title-'+slot);
+    const fnameEl = document.getElementById('fname-'+slot);
+    const rowsEl = document.getElementById('rows-'+slot);
+    dropEl.classList.add('error');
+    titleEl.textContent = 'Format tanınamadı';
+    fnameEl.textContent = file.name;
+    rowsEl.textContent = 'Bu dosya biçimi desteklenmiyor';
+    state[slot] = null;
+    onChange();
+  }
+  closeMappingModal();
+});
+
+document.getElementById('mapping-confirm').addEventListener('click', ()=>{
+  if(!mappingCtx) return;
+  const {slot, file, rows, onChange} = mappingCtx;
+  const selects = document.querySelectorAll('#mapping-fields select');
+  const def = {};
+  selects.forEach(sel=>{ def[sel.dataset.field] = sel.value || null; });
+
+  if(!def.tarih || !def.borc || !def.alacak){
+    alert('Tarih, Borç ve Alacak sütunlarını seçmeniz gerekiyor.');
+    return;
+  }
+
+  hatirlananFormatKaydet(Object.keys(rows[0] || {}), def);
+  uygulaBasariliYukleme(slot, file, rows, {name:'ozel', def}, onChange);
+  closeMappingModal();
+});
+
 function setupDrop(slot, onChange){
   const dropEl = document.getElementById('drop-'+slot);
   const inputEl = document.getElementById('file-'+slot);
@@ -84,25 +178,13 @@ function setupDrop(slot, onChange){
       const rows = await readWorkbookFile(file);
       const fmt = detectFormat(rows);
       if(!fmt){
-        dropEl.classList.add('error');
-        titleEl.textContent = 'Format tanınamadı';
+        titleEl.textContent = 'Sütun eşleştirmesi gerekiyor';
         fnameEl.textContent = file.name;
-        rowsEl.textContent = 'Bu dosya biçimi desteklenmiyor';
-        state[slot]=null;
-        onChange();
+        rowsEl.textContent = 'Aşağıdaki pencerede sütunları eşleştirin';
+        openMappingModal(slot, file, rows, onChange);
         return;
       }
-      const {kayitlar, hareketler} = extractMovements(rows, fmt.def);
-      state[slot] = {file, rows, fmt, kayitlar, hareketler};
-      dropEl.classList.add('filled');
-      titleEl.textContent = 'Dosya yüklendi';
-      fnameEl.textContent = file.name;
-      rowsEl.textContent = `${kayitlar.length} hareket bulundu`;
-      onChange();
-      const isimEl = document.getElementById('isim-'+slot);
-      if(isimEl.value.trim()===''){
-        isimEl.focus();
-      }
+      uygulaBasariliYukleme(slot, file, rows, fmt, onChange);
     }catch(err){
       dropEl.classList.add('error');
       titleEl.textContent = 'Okuma hatası';

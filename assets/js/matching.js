@@ -69,22 +69,96 @@ function fmtSayi(n){
   return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
-function detectFormat(rows){
-  if(!rows.length) return null;
-  const cols = new Set(Object.keys(rows[0]));
-  for(const [name, def] of Object.entries(FORMAT_TANIMLARI)){
-    if(def.gerekli.every(c=>cols.has(c))) return {name, def};
+/* ============ Esnek sütun eşleştirme (bilinen formatlardan hiçbiri tutmazsa) ============ */
+
+function normalizeHeader(s){
+  return String(s)
+    .toLocaleLowerCase('tr')
+    .replace(/ı/g,'i').replace(/i̇/g,'i')
+    .replace(/ş/g,'s').replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ö/g,'o').replace(/ü/g,'u')
+    .replace(/[_.]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+const ALAN_ANAHTAR_KELIMELERI = {
+  tarih: ['tarih'],
+  tip: ['evrak tipi','islem turu','belge turu','belgeturu','hareket tipi','tip','tur'],
+  borc: ['borc'],
+  alacak: ['alacak'],
+  evrak: ['evrak no','belge no','fatura no','evrakno','belgeno','evrak','belge'],
+  ek: ['aciklama','sorumlu','ek bilgi','not']
+};
+
+function esleKolonBul(normCols, anahtarlar){
+  for(const anahtar of anahtarlar){
+    const bulunan = normCols.find(c => c.norm === anahtar);
+    if(bulunan) return bulunan.orig;
+  }
+  for(const anahtar of anahtarlar){
+    const bulunan = normCols.find(c => c.norm.includes(anahtar));
+    if(bulunan) return bulunan.orig;
   }
   return null;
+}
+
+function enIyiTahminler(cols){
+  const normCols = cols.map(c => ({orig:c, norm:normalizeHeader(c)}));
+  return {
+    tarih: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.tarih),
+    tip: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.tip),
+    borc: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.borc),
+    alacak: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.alacak),
+    evrak: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.evrak),
+    ek: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.ek),
+  };
+}
+
+function detectFormatEsnek(rows){
+  if(!rows.length) return null;
+  const def = enIyiTahminler(Object.keys(rows[0]));
+  if(!def.tarih || !def.borc || !def.alacak) return null;
+  return {name:'esnek', def};
+}
+
+/* ============ Kullanıcının elle eşleştirdiği formatı hatırlama ============ */
+
+function kolonImzasi(cols){
+  return cols.slice().sort().join('|');
+}
+
+function hatirlananFormatGetir(cols){
+  try{
+    const raw = localStorage.getItem('ekstrematik_format_' + kolonImzasi(cols));
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function hatirlananFormatKaydet(cols, def){
+  try{
+    localStorage.setItem('ekstrematik_format_' + kolonImzasi(cols), JSON.stringify(def));
+  }catch(e){}
+}
+
+function detectFormat(rows){
+  if(!rows.length) return null;
+  const cols = Object.keys(rows[0]);
+  const hatirlanan = hatirlananFormatGetir(cols);
+  if(hatirlanan) return {name:'hatirlanan', def:hatirlanan};
+  const colSet = new Set(cols);
+  for(const [name, def] of Object.entries(FORMAT_TANIMLARI)){
+    if(def.gerekli.every(c=>colSet.has(c))) return {name, def};
+  }
+  return detectFormatEsnek(rows);
 }
 
 function extractMovements(rows, def){
   const kayitlar = [];
   let sid = 0;
   for(const r of rows){
-    const tip = r[def.tip];
-    if(tip==null) continue;
-    const tipStr = String(tip).toUpperCase();
+    const tip = def.tip ? r[def.tip] : '';
+    if(def.tip && tip==null) continue;
+    const tipStr = String(tip||'').toUpperCase();
     if(tipStr.includes('DEVİR') || tipStr.includes('DEVIR')) continue;
     const tarih = parseTarih(r[def.tarih]);
     if(!tarih) continue;
