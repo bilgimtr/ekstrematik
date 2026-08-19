@@ -20,6 +20,28 @@ const FORMAT_TANIMLARI = {
 
 function round2(x){ return Math.round((x + Number.EPSILON) * 100) / 100; }
 
+function parseSayi(val){
+  if(val===null || val===undefined || val==='') return 0;
+  if(typeof val === 'number') return val;
+  let s = String(val).trim();
+  if(s==='') return 0;
+  // Türkçe biçim: binlik nokta, ondalık virgül (ör. "1.234,56") -> 1234.56
+  if(/^-?\d{1,3}(\.\d{3})*(,\d+)?$/.test(s)){
+    s = s.replace(/\./g,'').replace(',', '.');
+  } else if(s.includes(',') && !s.includes('.')){
+    // sadece virgüllü ondalık (ör. "1234,56")
+    s = s.replace(',', '.');
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function normalizeEvrak(val){
+  if(val===null || val===undefined) return null;
+  const s = String(val).trim();
+  return s==='' ? null : s;
+}
+
 function parseTarih(val){
   if (val instanceof Date) return val;
   if (typeof val === 'number'){
@@ -66,9 +88,9 @@ function extractMovements(rows, def){
     if(tipStr.includes('DEVİR') || tipStr.includes('DEVIR')) continue;
     const tarih = parseTarih(r[def.tarih]);
     if(!tarih) continue;
-    const borc = round2(Number(r[def.borc])||0);
-    const alacak = round2(Number(r[def.alacak])||0);
-    const evrak = def.evrak ? r[def.evrak] : null;
+    const borc = round2(parseSayi(r[def.borc]));
+    const alacak = round2(parseSayi(r[def.alacak]));
+    const evrak = def.evrak ? normalizeEvrak(r[def.evrak]) : null;
     kayitlar.push({sid, tarih, tip, borc, alacak, evrak, ek: def.ek ? r[def.ek] : null});
     sid++;
   }
