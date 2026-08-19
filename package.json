@@ -1,0 +1,8 @@
+{
+  "name": "ekstrematik",
+  "private": true,
+  "description": "Ekstrematik statik sitesi + kullanıcı sayacı için Netlify Function bağımlılıkları",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
