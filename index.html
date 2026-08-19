@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ekstrematik — Ekstre Mutabakat Aracı</title>
-<meta name="description" content="İki firmanın cari hesap ekstresini yükleyin, eşleşen ve eşleşmeyen hareketleri saniyeler içinde tek bir renkli tabloda görün. Verileriniz tarayıcınızdan hiç çıkmaz.">
-<meta property="og:title" content="Ekstrematik — Ekstre Mutabakat Aracı">
-<meta property="og:description" content="İki firmanın cari hesap ekstresini karşılaştırıp mutabakat raporu çıkaran ücretsiz, tarayıcı temelli araç.">
+<title>Ekstrematik — Otomatik Ekstre Karşılaştırma Aracı</title>
+<meta name="description" content="İki firmanın cari hesap ekstresini yükleyin, eşleşmeyen hareketleri saniyeler içinde bulun, tek bir renkli tabloda görün. Verileriniz tarayıcınızdan hiç çıkmaz.">
+<meta property="og:title" content="Ekstrematik — Otomatik Ekstre Karşılaştırma Aracı">
+<meta property="og:description" content="İki firmanın cari hesap ekstresini karşılaştırıp eşleşmeyen hareketleri saniyeler içinde bulan, ücretsiz, tarayıcı temelli araç.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="tr_TR">
 <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
@@ -43,13 +43,14 @@
 
   <div>
   <header class="hero">
-    <div class="eyebrow">Mutabakat aracı</div>
-    <h1>İki ekstre yükle,<br><em>farkları</em> tek tabloda gör.</h1>
-    <p class="lede">Adım adım ilerleyin: önce kendi ekstrenizi, sonra karşı firmanın ekstresini yükleyin, onaylayın — rapor otomatik hazırlansın.</p>
+    <div class="eyebrow">Otomatik Ekstre Karşılaştırma Aracı</div>
+    <h1>Eşleşmeyen ekstreleri<br><em>saniyeler içinde</em> bulun.</h1>
+    <p class="lede">İki firmanın cari hesap ekstresini yükleyin — eşleşen, eşleşmeyen ve tutarı farklı hareketler otomatik olarak bulunup tek bir renkli tabloda önünüze gelsin.</p>
     <div class="privacy-note">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
-      Dosyalarınız tarayıcınızdan hiç çıkmaz — tüm işlem cihazınızda yapılır, sunucuya yüklenmez.
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      <span>Dosyalarınız tarayıcınızdan <strong>hiç çıkmaz</strong> — tüm işlem cihazınızda yapılır, sunucuya yüklenmez.</span>
     </div>
+    <div class="visitor-badge" id="visitor-stats" aria-live="polite"></div>
   </header>
 
   <div class="stepper" id="stepper">
@@ -195,10 +196,7 @@
 
 <footer class="site-footer">
   <div class="site-footer-inner">
-    <div>
-      <div class="site-footer-brand">EKSTREMATİK — cari hesap ekstresi mutabakat aracı</div>
-      <div class="visitor-stats" id="visitor-stats" aria-live="polite"></div>
-    </div>
+    <div class="site-footer-brand">EKSTREMATİK — otomatik ekstre karşılaştırma aracı</div>
     <ul class="site-footer-links">
       <li><a href="/hakkimizda.html">Hakkımızda</a></li>
       <li><a href="/gizlilik.html">Gizlilik Politikası</a></li>

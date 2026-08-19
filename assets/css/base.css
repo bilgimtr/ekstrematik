@@ -2,16 +2,16 @@
 
 :root{
   /* Dijital Defter paleti */
-  --paper:#F3F1EA;
-  --paper-line:#E4E0D3;
+  --paper:#E7E2D2;
+  --paper-line:#D5CEB8;
   --card:#FFFFFF;
-  --ink:#16241F;
-  --ink-soft:#4B5A54;
-  --ink-faint:#8B958E;
-  --navy:#1E3A3A;
-  --green:#1F6F54;
-  --green-bg:#E3F0EA;
-  --green-line:#B7D9C8;
+  --ink:#12201B;
+  --ink-soft:#40504A;
+  --ink-faint:#788377;
+  --navy:#152B2B;
+  --green:#195E46;
+  --green-bg:#DDEEE4;
+  --green-line:#A9CFBB;
 
   /* Durum renkleri — SADECE veri kodlaması için (sonuç tablosu/özet), UI süslemesi için kullanılmaz */
   --amber:#A8710E;
@@ -27,8 +27,8 @@
   --purple-bg:#ECE9F5;
   --purple-line:#C9C0E3;
 
-  --border:#DAD5C8;
-  --shadow: 0 1px 2px rgba(22,36,31,0.06);
+  --border:#C7C0A9;
+  --shadow: 0 1px 2px rgba(18,32,27,0.09);
   --radius:10px;
   --font-display:'Roboto Slab', serif;
   --font-body:'Inter', sans-serif;
