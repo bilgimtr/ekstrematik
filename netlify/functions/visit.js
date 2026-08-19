@@ -15,8 +15,8 @@ function makeId(){
 }
 
 export default async (req) => {
-  const visitors = getStore('visitors');
-  const stats = getStore('stats');
+  const visitors = getStore('visitors', { consistency: 'strong' });
+  const stats = getStore('stats', { consistency: 'strong' });
 
   const cookieHeader = req.headers.get('cookie');
   let visitorId = parseCookie(cookieHeader, 'ekv_id');
