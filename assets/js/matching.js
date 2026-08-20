@@ -277,6 +277,34 @@ function esletir(h1in, h2in, evrakTol=1.0, tutarTol=0.05){
   return {h1, h2};
 }
 
+/* Dosyanın başında boş satır(lar) veya firma adı/başlık satırı olabilir —
+   gerçek sütun başlıklarının hangi satırda olduğunu ilk 15 satır içinde arar. */
+function bulBaslikSatiriIndex(aoa){
+  const maxTara = Math.min(aoa.length, 15);
+  for(let i=0;i<maxTara;i++){
+    const row = aoa[i] || [];
+    const normCells = row.filter(c=>c!=null && String(c).trim()!=='').map(c=>normalizeHeader(c));
+    const tarihVar = normCells.some(c=>c.includes('tarih'));
+    const borcVar = normCells.some(c=>c.includes('borc'));
+    const alacakVar = normCells.some(c=>c.includes('alacak'));
+    if(tarihVar && borcVar && alacakVar) return i;
+  }
+  return 0;
+}
+
+function aoaToRows(aoa, headerIdx){
+  const headers = (aoa[headerIdx] || []).map(h => h==null ? '' : String(h).trim());
+  const rows = [];
+  for(let i=headerIdx+1; i<aoa.length; i++){
+    const rowArr = aoa[i];
+    if(!rowArr || rowArr.every(c=>c==null || String(c).trim()==='')) continue;
+    const obj = {};
+    headers.forEach((h,idx)=>{ if(h) obj[h] = rowArr[idx]!==undefined ? rowArr[idx] : null; });
+    rows.push(obj);
+  }
+  return rows;
+}
+
 function readWorkbookFile(file){
   return new Promise((resolve,reject)=>{
     const reader = new FileReader();
@@ -284,7 +312,9 @@ function readWorkbookFile(file){
       try{
         const wb = XLSX.read(e.target.result, {type:'array', cellDates:true, raw:true});
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, {defval:null, raw:true});
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:true});
+        const headerIdx = bulBaslikSatiriIndex(aoa);
+        const rows = aoaToRows(aoa, headerIdx);
         resolve(rows);
       }catch(err){ reject(err); }
     };

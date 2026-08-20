@@ -111,10 +111,34 @@ def _parse_sayi(deger):
         return 0.0
 
 
+def _normalize_baslik(s):
+    s = str(s).lower()
+    for a, b in [("ı", "i"), ("i̇", "i"), ("ş", "s"), ("ç", "c"), ("ğ", "g"), ("ö", "o"), ("ü", "u")]:
+        s = s.replace(a, b)
+    return s
+
+
+def _baslik_satiri_bul(path):
+    """Dosyanın başında boş satır(lar) veya firma adı/başlık satırı olabilir —
+    gerçek sütun başlıklarının hangi satırda olduğunu ilk 15 satır içinde arar."""
+    try:
+        onizleme = pd.read_excel(path, header=None, nrows=15)
+    except Exception:
+        return 0
+    for i in range(len(onizleme)):
+        hucreler = [_normalize_baslik(v) for v in onizleme.iloc[i].tolist() if pd.notna(v)]
+        if (any("tarih" in h for h in hucreler)
+                and any("borc" in h for h in hucreler)
+                and any("alacak" in h for h in hucreler)):
+            return i
+    return 0
+
+
 def dosya_oku(path):
     """xlsx/xls dosyasını pandas ile okur (xls için xlrd otomatik kullanılır)."""
     try:
-        return pd.read_excel(path)
+        header_idx = _baslik_satiri_bul(path)
+        return pd.read_excel(path, header=header_idx)
     except ImportError as e:
         sys.exit(f"HATA: {e}\nÇözüm: pip install xlrd --break-system-packages")
 
