@@ -15,6 +15,15 @@ const FORMAT_TANIMLARI = {
     gerekli: ['TARIH','BELGE NO','BELGETURU','BORC','ALACAK'],
     tarih:'TARIH', tip:'BELGETURU', borc:'BORC', alacak:'ALACAK',
     evrak:'BELGE NO', ek:'ACIKLAMA'
+  },
+  doviz_ekstre: {
+    gerekli: ['Tarih','Fiş No','İşlem Türü','Borç','Alacak','PB','Kur','İşlem TL'],
+    tarih:'Tarih', tip:'İşlem Türü', borc:'Borç', alacak:'Alacak',
+    evrak:'Fiş No', ek:null,
+    // Borç/Alacak dövizli sütunlar sadece YÖN belirlemek için kullanılır;
+    // gerçek karşılaştırma tutarı her zaman TL karşılığından alınır —
+    // aksi halde döviz tutarı TL ekstresiyle asla eşleşmez.
+    tutarKaynak:'İşlem TL'
   }
 };
 
@@ -24,6 +33,9 @@ function parseSayi(val){
   if(val===null || val===undefined || val==='') return 0;
   if(typeof val === 'number') return val;
   let s = String(val).trim();
+  if(s==='') return 0;
+  // Para birimi sembolü/etiketi varsa temizle (ör. "64.595,20₺", "$1.234,56", "1.234,56 TL")
+  s = s.replace(/[^\d.,-]/g,'');
   if(s==='') return 0;
   // Türkçe biçim: binlik nokta, ondalık virgül (ör. "1.234,56") -> 1234.56
   if(/^-?\d{1,3}(\.\d{3})*(,\d+)?$/.test(s)){
@@ -162,8 +174,20 @@ function extractMovements(rows, def){
     if(tipStr.includes('DEVİR') || tipStr.includes('DEVIR')) continue;
     const tarih = parseTarih(r[def.tarih]);
     if(!tarih) continue;
-    const borc = round2(parseSayi(r[def.borc]));
-    const alacak = round2(parseSayi(r[def.alacak]));
+    const borcYon = parseSayi(r[def.borc]);
+    const alacakYon = parseSayi(r[def.alacak]);
+    let borc, alacak;
+    if(def.tutarKaynak){
+      // Borç/Alacak sadece yön belirtir; gerçek tutar ayrı bir sütundan (ör. TL karşılığı) alınır
+      const tutar = Math.abs(parseSayi(r[def.tutarKaynak]));
+      borc = borcYon!==0 ? tutar : 0;
+      alacak = alacakYon!==0 ? tutar : 0;
+    } else {
+      borc = borcYon;
+      alacak = alacakYon;
+    }
+    borc = round2(borc);
+    alacak = round2(alacak);
     const evrak = def.evrak ? normalizeEvrak(r[def.evrak]) : null;
     kayitlar.push({sid, tarih, tip, borc, alacak, evrak, ek: def.ek ? r[def.ek] : null});
     sid++;

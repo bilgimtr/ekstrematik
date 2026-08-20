@@ -36,12 +36,22 @@ eşleşen / eşleşmeyen / gruplu eşleşen hareketleri tek bir raporda göstere
 
 ## Desteklenen ekstre formatları
 
-Şu an üç ekstre formatı tanınıyor (`FORMAT_TANIMLARI` altında tanımlı,
+Şu an dört ekstre formatı tanınıyor (`FORMAT_TANIMLARI` altında tanımlı,
 hem `assets/js/matching.js` içinde hem `ekstre_mutabakat.py` içinde):
 
 - **hesap_karti**: `TARİH, EVRAK TİPİ, ANA DÖVİZ BORÇ, ANA DÖVİZ ALACAK, GIB FATURA NO, SORUMLU İSMİ`
 - **cari_ekstre**: `İşlem Tarihi, İşlem Türü, Borç Tutarı, Alacak Tutarı, Evrak No, Açıklama`
 - **logo_ekstre**: `TARIH, BELGE NO, BELGETURU, BORC, ALACAK, ACIKLAMA`
+- **doviz_ekstre**: `Tarih, Fiş No, İşlem Türü, Borç, Alacak, PB, Kur, İşlem TL` — döviz cinsinden
+  tutulan hesaplar için. Borç/Alacak sütunları dövizli olduğundan sadece yön (hangi taraf)
+  belirlemek için kullanılır; gerçek karşılaştırma tutarı her zaman `İşlem TL` (TL karşılığı)
+  sütunundan alınır (`tutar_kaynak_col` / `tutarKaynak`). Aksi halde döviz tutarı, karşı
+  firmanın TL cinsinden ekstresiyle hiçbir zaman eşleşmez.
+
+Ayrıca bilinen formatlardan hiçbiri tutmazsa **esnek sütun eşleştirmesi** devreye girer
+(büyük/küçük harf, Türkçe karakter, boşluk farklarına takılmadan anahtar kelimeyle sütun
+bulmaya çalışır); o da başarısız olursa web arayüzü kullanıcıya sütunları elle eşleştirebileceği
+bir pencere açar ve seçimi tarayıcıda hatırlar.
 
 Yeni bir formatla karşılaşılırsa `FORMAT_TANIMLARI` sözlüğüne birkaç satırlık yeni bir
 tanım eklemek yeterli.

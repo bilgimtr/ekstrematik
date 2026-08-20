@@ -32,6 +32,7 @@ EŞLEŞTİRME MANTIĞI
 """
 
 import argparse
+import re
 import sys
 from datetime import datetime
 
@@ -74,7 +75,40 @@ FORMAT_TANIMLARI = {
         "ek_bilgi_col": "ACIKLAMA",
         "tarih_format": None,  # pandas otomatik algılar
     },
+    "doviz_ekstre": {
+        "gerekli_sutunlar": {"Tarih", "Fiş No", "İşlem Türü", "Borç", "Alacak", "PB", "Kur", "İşlem TL"},
+        "tarih_col": "Tarih",
+        "tip_col": "İşlem Türü",
+        "borc_col": "Borç",
+        "alacak_col": "Alacak",
+        "evrak_col": "Fiş No",
+        "ek_bilgi_col": None,
+        "tarih_format": None,  # pandas otomatik algılar
+        # Borç/Alacak dövizli sütunlar sadece YÖN belirlemek için kullanılır;
+        # gerçek karşılaştırma tutarı her zaman TL karşılığından alınır —
+        # aksi halde döviz tutarı TL ekstresiyle asla eşleşmez.
+        "tutar_kaynak_col": "İşlem TL",
+    },
 }
+
+
+def _parse_sayi(deger):
+    """Sayıyı, para birimi sembolü/etiketi ve Türkçe biçim (1.234,56) içerse bile ayrıştırır."""
+    if pd.isna(deger):
+        return 0.0
+    if isinstance(deger, (int, float)):
+        return float(deger)
+    s = re.sub(r"[^\d,.\-]", "", str(deger))
+    if not s:
+        return 0.0
+    if re.match(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$", s):
+        s = s.replace(".", "").replace(",", ".")
+    elif "," in s and "." not in s:
+        s = s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
 
 
 def dosya_oku(path):
@@ -105,8 +139,18 @@ def hareketleri_cikar(df, tanim, dosya_kodu):
     else:
         d["_tarih"] = pd.to_datetime(d[tanim["tarih_col"]], errors="coerce")
 
-    d["_borc"] = pd.to_numeric(d[tanim["borc_col"]], errors="coerce").fillna(0).round(2)
-    d["_alacak"] = pd.to_numeric(d[tanim["alacak_col"]], errors="coerce").fillna(0).round(2)
+    borc_yon = d[tanim["borc_col"]].map(_parse_sayi)
+    alacak_yon = d[tanim["alacak_col"]].map(_parse_sayi)
+    tutar_kaynak_col = tanim.get("tutar_kaynak_col")
+    if tutar_kaynak_col:
+        # Borç/Alacak dövizli sütunlar sadece YÖN belirlemek için kullanılır;
+        # gerçek karşılaştırma tutarı her zaman TL karşılığından alınır.
+        tutar_tl = d[tutar_kaynak_col].map(_parse_sayi).abs()
+        d["_borc"] = tutar_tl.where(borc_yon != 0, 0).round(2)
+        d["_alacak"] = tutar_tl.where(alacak_yon != 0, 0).round(2)
+    else:
+        d["_borc"] = borc_yon.round(2)
+        d["_alacak"] = alacak_yon.round(2)
     d["_evrak"] = d[tanim["evrak_col"]] if tanim["evrak_col"] in d.columns else None
     d["_ekbilgi"] = d[tanim["ek_bilgi_col"]] if tanim["ek_bilgi_col"] in d.columns else None
     d["_tip"] = d[tanim["tip_col"]]
