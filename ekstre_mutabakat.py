@@ -89,6 +89,22 @@ FORMAT_TANIMLARI = {
         # aksi halde döviz tutarı TL ekstresiyle asla eşleşmez.
         "tutar_kaynak_col": "İşlem TL",
     },
+    "banka_hareket": {
+        "gerekli_sutunlar": {"Tarih", "Açıklama", "Tutar", "Bakiye", "Dekont No"},
+        "tarih_col": "Tarih",
+        "tip_col": None,
+        "borc_col": None,
+        "alacak_col": None,
+        "evrak_col": "Dekont No",
+        "ek_bilgi_col": "Açıklama",
+        # DD.MM.YYYY biçimi açıkça belirtiliyor — pandas'ın otomatik algılaması
+        # (dayfirst kontrolü olmadan) bu biçimi AA.GG.YYYY gibi yanlış yorumlayıp
+        # "12.09.2023" (12 Eylül) tarihini "9 Aralık" sanabiliyor.
+        "tarih_format": "%d.%m.%Y",
+        # Ayrı Borç/Alacak sütunu yok, tek bir işaretli tutar var:
+        # negatif = borç (para çıkışı), pozitif = alacak (para girişi)
+        "tutar_isaretli_col": "Tutar",
+    },
 }
 
 
@@ -118,26 +134,36 @@ def _normalize_baslik(s):
     return s
 
 
+def _onizleme_oku(path):
+    if str(path).lower().endswith(".csv"):
+        return pd.read_csv(path, header=None, nrows=15, sep=None, engine="python", encoding="utf-8-sig")
+    return pd.read_excel(path, header=None, nrows=15)
+
+
 def _baslik_satiri_bul(path):
     """Dosyanın başında boş satır(lar) veya firma adı/başlık satırı olabilir —
     gerçek sütun başlıklarının hangi satırda olduğunu ilk 15 satır içinde arar."""
     try:
-        onizleme = pd.read_excel(path, header=None, nrows=15)
+        onizleme = _onizleme_oku(path)
     except Exception:
         return 0
     for i in range(len(onizleme)):
         hucreler = [_normalize_baslik(v) for v in onizleme.iloc[i].tolist() if pd.notna(v)]
-        if (any("tarih" in h for h in hucreler)
-                and any("borc" in h for h in hucreler)
-                and any("alacak" in h for h in hucreler)):
+        tarih_var = any("tarih" in h for h in hucreler)
+        borc_var = any("borc" in h for h in hucreler)
+        alacak_var = any("alacak" in h for h in hucreler)
+        tutar_var = any("tutar" in h for h in hucreler)
+        if tarih_var and ((borc_var and alacak_var) or tutar_var):
             return i
     return 0
 
 
 def dosya_oku(path):
-    """xlsx/xls dosyasını pandas ile okur (xls için xlrd otomatik kullanılır)."""
+    """xlsx/xls/csv dosyasını pandas ile okur (xls için xlrd otomatik kullanılır)."""
     try:
         header_idx = _baslik_satiri_bul(path)
+        if str(path).lower().endswith(".csv"):
+            return pd.read_csv(path, header=header_idx, sep=None, engine="python", encoding="utf-8-sig")
         return pd.read_excel(path, header=header_idx)
     except ImportError as e:
         sys.exit(f"HATA: {e}\nÇözüm: pip install xlrd --break-system-packages")
@@ -163,21 +189,27 @@ def hareketleri_cikar(df, tanim, dosya_kodu):
     else:
         d["_tarih"] = pd.to_datetime(d[tanim["tarih_col"]], errors="coerce")
 
-    borc_yon = d[tanim["borc_col"]].map(_parse_sayi)
-    alacak_yon = d[tanim["alacak_col"]].map(_parse_sayi)
+    tutar_isaretli_col = tanim.get("tutar_isaretli_col")
     tutar_kaynak_col = tanim.get("tutar_kaynak_col")
-    if tutar_kaynak_col:
+    if tutar_isaretli_col:
+        # Ayrı borç/alacak sütunu yok, tek işaretli tutar var: negatif=borç, pozitif=alacak
+        deger = d[tutar_isaretli_col].map(_parse_sayi)
+        d["_borc"] = (-deger).where(deger < 0, 0).round(2)
+        d["_alacak"] = deger.where(deger > 0, 0).round(2)
+    elif tutar_kaynak_col:
         # Borç/Alacak dövizli sütunlar sadece YÖN belirlemek için kullanılır;
         # gerçek karşılaştırma tutarı her zaman TL karşılığından alınır.
+        borc_yon = d[tanim["borc_col"]].map(_parse_sayi)
+        alacak_yon = d[tanim["alacak_col"]].map(_parse_sayi)
         tutar_tl = d[tutar_kaynak_col].map(_parse_sayi).abs()
         d["_borc"] = tutar_tl.where(borc_yon != 0, 0).round(2)
         d["_alacak"] = tutar_tl.where(alacak_yon != 0, 0).round(2)
     else:
-        d["_borc"] = borc_yon.round(2)
-        d["_alacak"] = alacak_yon.round(2)
-    d["_evrak"] = d[tanim["evrak_col"]] if tanim["evrak_col"] in d.columns else None
-    d["_ekbilgi"] = d[tanim["ek_bilgi_col"]] if tanim["ek_bilgi_col"] in d.columns else None
-    d["_tip"] = d[tanim["tip_col"]]
+        d["_borc"] = d[tanim["borc_col"]].map(_parse_sayi).round(2)
+        d["_alacak"] = d[tanim["alacak_col"]].map(_parse_sayi).round(2)
+    d["_evrak"] = d[tanim["evrak_col"]] if tanim["evrak_col"] and tanim["evrak_col"] in d.columns else None
+    d["_ekbilgi"] = d[tanim["ek_bilgi_col"]] if tanim["ek_bilgi_col"] and tanim["ek_bilgi_col"] in d.columns else None
+    d["_tip"] = d[tanim["tip_col"]] if tanim["tip_col"] and tanim["tip_col"] in d.columns else ""
     d = d.dropna(subset=["_tarih"])  # devir/toplam gibi tarihsiz satırları at
     d = d[d["_tip"].notna()]
     # Mikro dışa aktarımlarında devir (açılış bakiyesi) satırları "_DEVİR_" gibi
@@ -274,6 +306,10 @@ def _en_iyi_alt_kume(hedef_tutar, havuz, tol, max_boyut):
     return dfs(0, 0)
 
 
+GRUP_HAVUZ_LIMIT = 60  # bkz. assets/js/matching.js — büyük bankalık dosyalarda
+# alt küme aramasının kombinatoryal olarak patlamasını (dakikalarca sürmesini) önler
+
+
 def grupla_eslestir(h1, h2, tol=0.05, max_boyut=5, tarih_penceresi_gun=60):
     """Bir tarafın tek satırının, karşı tarafta 2+ satıra bölünmüş olabileceği durumları
     (N'e 1 eşleştirme) yakalar. Örn: A'da 3.000 TL tek satır, B'de 1.000+1.000+1.000 üç satır.
@@ -292,7 +328,7 @@ def grupla_eslestir(h1, h2, tol=0.05, max_boyut=5, tarih_penceresi_gun=60):
                 & (havuz_df["yon"] == ters[hedef["yon"]])
                 & ((havuz_df["tarih"] - hedef["tarih"]).abs() <= pd.Timedelta(days=tarih_penceresi_gun))
             ]
-            if len(aday_havuz) < 2:
+            if len(aday_havuz) < 2 or len(aday_havuz) > GRUP_HAVUZ_LIMIT:
                 continue
             havuz_listesi = aday_havuz.to_dict("records")
             combo = _en_iyi_alt_kume(hedef["tutar"], havuz_listesi, tol, max_boyut)

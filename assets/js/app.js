@@ -258,20 +258,25 @@ let currentRows = [];
 let currentFilter = 'all';
 
 const runBtn = document.getElementById('run-btn');
-runBtn.addEventListener('click', ()=>{
+const runBtnMetni = runBtn.innerHTML;
+runBtn.addEventListener('click', async ()=>{
   runBtn.classList.remove('stamped');
   void runBtn.offsetWidth;
   runBtn.classList.add('stamped');
-  runMutabakat();
-  setTimeout(()=>goToStep(4), 260); // reklam kapısı şimdilik devre dışı — geri açmak için showAdGate() ile değiştir
+  runBtn.disabled = true;
+  runBtn.innerHTML = 'İşleniyor…';
+  await runMutabakat();
+  runBtn.disabled = false;
+  runBtn.innerHTML = runBtnMetni;
+  goToStep(4); // reklam kapısı şimdilik devre dışı — geri açmak için showAdGate() ile değiştir
 });
 
-function runMutabakat(){
+async function runMutabakat(){
   const firmaA = isimA.value.trim() || 'Kendi Firmanız';
   const firmaB = isimB.value.trim() || 'Karşı Firma';
 
-  const {h1, h2} = esletir(state.a.hareketler, state.b.hareketler);
-  grupEslestir(h1, h2);
+  const {h1, h2} = await esletir(state.a.hareketler, state.b.hareketler);
+  await grupEslestir(h1, h2);
   const k1 = new Map(state.a.kayitlar.map(k=>[k.sid,k]));
   const k2 = new Map(state.b.kayitlar.map(k=>[k.sid,k]));
 

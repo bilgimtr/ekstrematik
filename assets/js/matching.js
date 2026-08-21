@@ -24,6 +24,14 @@ const FORMAT_TANIMLARI = {
     // gerçek karşılaştırma tutarı her zaman TL karşılığından alınır —
     // aksi halde döviz tutarı TL ekstresiyle asla eşleşmez.
     tutarKaynak:'İşlem TL'
+  },
+  banka_hareket: {
+    gerekli: ['Tarih','Açıklama','Tutar','Bakiye','Dekont No'],
+    tarih:'Tarih', tip:null, borc:null, alacak:null,
+    evrak:'Dekont No', ek:'Açıklama',
+    // Ayrı Borç/Alacak sütunu yok, tek bir işaretli tutar var:
+    // negatif = borç (para çıkışı), pozitif = alacak (para girişi)
+    tutarIsaretli:'Tutar'
   }
 };
 
@@ -95,10 +103,11 @@ function normalizeHeader(s){
 
 const ALAN_ANAHTAR_KELIMELERI = {
   tarih: ['tarih'],
-  tip: ['evrak tipi','islem turu','belge turu','belgeturu','hareket tipi','tip','tur'],
+  tip: ['evrak tipi','islem turu','belge turu','belgeturu','hareket tipi','tip','tur','etiket'],
   borc: ['borc'],
   alacak: ['alacak'],
-  evrak: ['evrak no','belge no','fatura no','evrakno','belgeno','evrak','belge'],
+  tutarIsaretli: ['tutar'],
+  evrak: ['evrak no','belge no','fatura no','evrakno','belgeno','dekont no','evrak','belge','dekont'],
   ek: ['aciklama','sorumlu','ek bilgi','not']
 };
 
@@ -121,6 +130,7 @@ function enIyiTahminler(cols){
     tip: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.tip),
     borc: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.borc),
     alacak: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.alacak),
+    tutarIsaretli: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.tutarIsaretli),
     evrak: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.evrak),
     ek: esleKolonBul(normCols, ALAN_ANAHTAR_KELIMELERI.ek),
   };
@@ -128,9 +138,16 @@ function enIyiTahminler(cols){
 
 function detectFormatEsnek(rows){
   if(!rows.length) return null;
-  const def = enIyiTahminler(Object.keys(rows[0]));
-  if(!def.tarih || !def.borc || !def.alacak) return null;
-  return {name:'esnek', def};
+  const tahmin = enIyiTahminler(Object.keys(rows[0]));
+  if(!tahmin.tarih) return null;
+  if(tahmin.borc && tahmin.alacak){
+    return {name:'esnek', def:{tarih:tahmin.tarih, tip:tahmin.tip, borc:tahmin.borc, alacak:tahmin.alacak, evrak:tahmin.evrak, ek:tahmin.ek}};
+  }
+  // Ayrı borç/alacak sütunu yoksa, işaretli tek tutar sütununu dene (banka ekstresi gibi)
+  if(tahmin.tutarIsaretli && tahmin.tutarIsaretli!==tahmin.tarih){
+    return {name:'esnek', def:{tarih:tahmin.tarih, tip:tahmin.tip, borc:null, alacak:null, evrak:tahmin.evrak, ek:tahmin.ek, tutarIsaretli:tahmin.tutarIsaretli}};
+  }
+  return null;
 }
 
 /* ============ Kullanıcının elle eşleştirdiği formatı hatırlama ============ */
@@ -174,17 +191,24 @@ function extractMovements(rows, def){
     if(tipStr.includes('DEVİR') || tipStr.includes('DEVIR')) continue;
     const tarih = parseTarih(r[def.tarih]);
     if(!tarih) continue;
-    const borcYon = parseSayi(r[def.borc]);
-    const alacakYon = parseSayi(r[def.alacak]);
     let borc, alacak;
-    if(def.tutarKaynak){
-      // Borç/Alacak sadece yön belirtir; gerçek tutar ayrı bir sütundan (ör. TL karşılığı) alınır
-      const tutar = Math.abs(parseSayi(r[def.tutarKaynak]));
-      borc = borcYon!==0 ? tutar : 0;
-      alacak = alacakYon!==0 ? tutar : 0;
+    if(def.tutarIsaretli){
+      // Ayrı borç/alacak sütunu yok, tek işaretli tutar var: negatif=borç, pozitif=alacak
+      const deger = parseSayi(r[def.tutarIsaretli]);
+      borc = deger < 0 ? Math.abs(deger) : 0;
+      alacak = deger > 0 ? deger : 0;
     } else {
-      borc = borcYon;
-      alacak = alacakYon;
+      const borcYon = parseSayi(r[def.borc]);
+      const alacakYon = parseSayi(r[def.alacak]);
+      if(def.tutarKaynak){
+        // Borç/Alacak sadece yön belirtir; gerçek tutar ayrı bir sütundan (ör. TL karşılığı) alınır
+        const tutar = Math.abs(parseSayi(r[def.tutarKaynak]));
+        borc = borcYon!==0 ? tutar : 0;
+        alacak = alacakYon!==0 ? tutar : 0;
+      } else {
+        borc = borcYon;
+        alacak = alacakYon;
+      }
     }
     borc = round2(borc);
     alacak = round2(alacak);
@@ -199,6 +223,17 @@ function extractMovements(rows, def){
   }
   return {kayitlar, hareketler};
 }
+
+/* Büyük dosyalarda ana iş parçacığını kilitlememek için periyodik olarak
+   tarayıcıya "nefes alma" fırsatı verir (arayüz donmasın diye). */
+function nefesAl(){
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+// Alt küme (subset-sum) araması, aday havuzu büyüdükçe kombinatoryal olarak
+// pahalılaşır. Binlerce satırlık banka ekstrelerinde tarayıcıyı kilitlememek
+// için havuz bu boyutu aşarsa gruplu eşleştirme o hedef için atlanır.
+const GRUP_HAVUZ_LIMIT = 60;
 
 function findSubset(target, pool, tol, maxSize){
   const sorted = pool.slice().sort((a,b)=>a.tutar-b.tutar);
@@ -219,33 +254,37 @@ function findSubset(target, pool, tol, maxSize){
   return dfs(0,[],0);
 }
 
-function grupEslestir(h1, h2, tol=0.05, maxSize=5, dateWindowDays=60){
+async function grupEslestir(h1, h2, tol=0.05, maxSize=5, dateWindowDays=60){
   const ters = {BORC:'ALACAK', ALACAK:'BORC'};
   let grupNo = 0;
-  function tekYondenAra(hedefListe, havuzListe){
+  async function tekYondenAra(hedefListe, havuzListe){
     const hedefler = hedefListe.filter(r=>!r.matched).sort((a,b)=>a.tarih-b.tarih);
+    let sayac = 0;
     for(const hedef of hedefler){
       if(hedef.matched) continue;
       const havuz = havuzListe.filter(r=>!r.matched && r.yon===ters[hedef.yon] &&
         Math.abs((r.tarih - hedef.tarih)/86400000) <= dateWindowDays);
-      if(havuz.length<2) continue;
+      if(havuz.length<2 || havuz.length>GRUP_HAVUZ_LIMIT) continue;
       const combo = findSubset(hedef.tutar, havuz, tol, maxSize);
       if(combo){
         grupNo++;
         hedef.matched=true; hedef.status='Gruplu Eşleşme'; hedef.grup=grupNo;
         for(const c of combo){ c.matched=true; c.status='Gruplu Eşleşme'; c.grup=grupNo; }
       }
+      sayac++;
+      if(sayac % 25 === 0) await nefesAl();
     }
   }
-  tekYondenAra(h1, h2);
-  tekYondenAra(h2, h1);
+  await tekYondenAra(h1, h2);
+  await tekYondenAra(h2, h1);
 }
 
-function esletir(h1in, h2in, evrakTol=1.0, tutarTol=0.05){
+async function esletir(h1in, h2in, evrakTol=1.0, tutarTol=0.05){
   const h1 = h1in.map(r=>({...r, matched:false, matchId2:null, status:null, grup:null}));
   const h2 = h2in.map(r=>({...r, matched:false, matchId1:null, grup:null}));
   const ters = {BORC:'ALACAK', ALACAK:'BORC'};
 
+  let sayac = 0;
   for(const r1 of h1){
     if(r1.matched || r1.evrak==null || r1.evrak==='') continue;
     let best=null, bestDiff=Infinity;
@@ -259,8 +298,11 @@ function esletir(h1in, h2in, evrakTol=1.0, tutarTol=0.05){
       r1.status = bestDiff<=evrakTol ? 'Eşleşti' : 'Tutar Farklı';
       best.matched=true; best.matchId1=r1.satirId;
     }
+    sayac++;
+    if(sayac % 200 === 0) await nefesAl();
   }
   const kalan = h1.filter(r=>!r.matched).sort((a,b)=>a.tarih-b.tarih);
+  sayac = 0;
   for(const r1 of kalan){
     let best=null, bestGap=Infinity;
     for(const r2 of h2){
@@ -273,6 +315,8 @@ function esletir(h1in, h2in, evrakTol=1.0, tutarTol=0.05){
       r1.matched=true; r1.matchId2=best.satirId; r1.status='Eşleşti';
       best.matched=true; best.matchId1=r1.satirId;
     }
+    sayac++;
+    if(sayac % 200 === 0) await nefesAl();
   }
   return {h1, h2};
 }
@@ -287,7 +331,8 @@ function bulBaslikSatiriIndex(aoa){
     const tarihVar = normCells.some(c=>c.includes('tarih'));
     const borcVar = normCells.some(c=>c.includes('borc'));
     const alacakVar = normCells.some(c=>c.includes('alacak'));
-    if(tarihVar && borcVar && alacakVar) return i;
+    const tutarVar = normCells.some(c=>c.includes('tutar'));
+    if(tarihVar && ((borcVar && alacakVar) || tutarVar)) return i;
   }
   return 0;
 }
@@ -305,7 +350,54 @@ function aoaToRows(aoa, headerIdx){
   return rows;
 }
 
+/* ============ CSV desteği (banka ekstresi dışa aktarımları çoğunlukla CSV) ============ */
+
+function csvSatiriAyir(satir, ayrac){
+  const sonuc = [];
+  let mevcut = '';
+  let tirnakIcinde = false;
+  for(let i=0;i<satir.length;i++){
+    const c = satir[i];
+    if(c === '"'){
+      if(tirnakIcinde && satir[i+1] === '"'){ mevcut += '"'; i++; }
+      else tirnakIcinde = !tirnakIcinde;
+    } else if(c === ayrac && !tirnakIcinde){
+      sonuc.push(mevcut); mevcut = '';
+    } else {
+      mevcut += c;
+    }
+  }
+  sonuc.push(mevcut);
+  return sonuc;
+}
+
+function parseCSV(text){
+  const temiz = text.replace(/^﻿/, ''); // UTF-8 BOM varsa temizle
+  const satirlar = temiz.split(/\r\n|\n|\r/).filter(s => s.length > 0);
+  if(!satirlar.length) return [];
+  // Ayraç noktalı virgül mü virgül mü — başlık satırındaki sayıya göre karar ver
+  const ilkSatir = satirlar[0];
+  const ayrac = (ilkSatir.split(';').length >= ilkSatir.split(',').length) ? ';' : ',';
+  return satirlar.map(s => csvSatiriAyir(s, ayrac));
+}
+
 function readWorkbookFile(file){
+  const dosyaAdi = (file.name || '').toLowerCase();
+  if(dosyaAdi.endsWith('.csv')){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = e=>{
+        try{
+          const aoa = parseCSV(String(e.target.result));
+          const headerIdx = bulBaslikSatiriIndex(aoa);
+          const rows = aoaToRows(aoa, headerIdx);
+          resolve(rows);
+        }catch(err){ reject(err); }
+      };
+      reader.onerror = ()=>reject(new Error('Dosya okunamadı'));
+      reader.readAsText(file, 'UTF-8');
+    });
+  }
   return new Promise((resolve,reject)=>{
     const reader = new FileReader();
     reader.onload = e=>{
